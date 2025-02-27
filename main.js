@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, shell } = require("electron");
 const path = require("path");
 const { fetchNews } = require("./newsFetcher");
 const { translateText } = require("./translator");
@@ -18,7 +18,9 @@ app.whenReady().then(() => {
         fullscreenable: false,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
-            nodeIntegration: true
+            contextIsolation: true,
+            enableRemoteModule: false,
+            nodeIntegration: false
         }
     });
 
@@ -45,7 +47,8 @@ app.whenReady().then(() => {
         {
             label: "종료",
             click: () => {
-                app.quit();
+                app.isQuiting = true; // 종료 플래그 설정
+                app.quit(); // 애플리케이션 종료
             }
         }
     ]);
@@ -64,13 +67,17 @@ app.whenReady().then(() => {
 
     // 앱이 닫혀도 트레이에서 실행되도록 설정
     mainWindow.on("close", (event) => {
-        event.preventDefault();
-        mainWindow.hide();
+        if (!app.isQuiting) {
+            event.preventDefault();
+            mainWindow.hide();
+        }
     });
 
     app.on("window-all-closed", () => {
         if (process.platform !== "darwin") app.quit();
     });
+
+    console.log("isQuiting 상태:", app.isQuiting);
 });
 
 ipcMain.handle("get-news", async () => {
@@ -83,4 +90,13 @@ ipcMain.handle("translate-news", async () => {
         article.title = await translateText(article.title, "ko"); // 영어 → 한국어 번역
     }
     return articles;
+});
+
+ipcMain.handle('open-link', (event, url) => {
+    console.log(`🔗 open-link 호출: ${url}`); // URL 확인
+    if (url) {
+        shell.openExternal(url);
+    } else {
+        console.error("❌ URL이 정의되지 않음!");
+    }
 });

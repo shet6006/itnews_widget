@@ -1,41 +1,93 @@
 body {
-    background: transparent;
+    background-color: rgba(255, 255, 255, 0.3);
     font-family: Arial, sans-serif;
-    text-align: center;
+    color: #333;
+    margin: 0;
+    padding: 20px;
 }
 
 #widget {
-    width: 320px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    padding: 15px;
+    max-width: 400px;
+    margin: auto;
+    background: rgba(255, 255, 255, 0.5);
     border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    backdrop-filter: blur(10px);
 }
 
 h2 {
-    font-size: 18px;
-    margin-bottom: 10px;
+    text-align: center;
+    color: #003366;
 }
 
-ul {
-    list-style: none;
-    padding: 0;
-}
-
-li {
+.card {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 15px;
     margin: 10px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
 }
 
-a {
-    color: #00c3ff;
+.card:hover {
+    transform: scale(1.02);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.card a {
     text-decoration: none;
+    color: #003366;
+}
+
+.card a:hover {
+    text-decoration: underline;
 }
 
 #translate-btn {
-    background: #00c3ff;
-    border: none;
-    padding: 8px;
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: #003366;
     color: white;
+    border: 1px solid #002244;
     border-radius: 5px;
     cursor: pointer;
+    margin-top: 20px;
+}
+
+#translate-btn:hover {
+    background: #002244;
+}
+
+/* 전체 스크롤바 스타일 */
+::-webkit-scrollbar {
+    width: 12px; /* 스크롤바의 너비 */
+}
+
+/* 스크롤바의 트랙(배경) 스타일 */
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.5); /* 트랙의 배경색 */
+    border-radius: 10px; /* 모서리 둥글게 */
+}
+
+/* 스크롤바의 핸들(잡는 부분) 스타일 */
+::-webkit-scrollbar-thumb {
+    background: #003366; /* 핸들의 색상 */
+    border-radius: 10px; /* 모서리 둥글게 */
+    transition: background 0.3s; /* 색상 변화 애니메이션 */
+}
+
+/* 핸들에 마우스를 올렸을 때의 스타일 */
+::-webkit-scrollbar-thumb:hover {
+    background: #002244; /* 핸들이 어두워짐 */
+}
+
+/* 스크롤바의 핸들이 이동할 때 물방울 효과 */
+::-webkit-scrollbar-thumb:active {
+    background: #001122; /* 핸들이 눌렸을 때 색상 */
 }
