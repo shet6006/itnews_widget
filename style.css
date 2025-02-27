@@ -1,0 +1,41 @@
+body {
+    background: transparent;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+#widget {
+    width: 320px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    margin: 10px 0;
+}
+
+a {
+    color: #00c3ff;
+    text-decoration: none;
+}
+
+#translate-btn {
+    background: #00c3ff;
+    border: none;
+    padding: 8px;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
