@@ -1,11 +1,17 @@
-body {
-    background-color: rgba(255, 255, 255, 0.3);
-    font-family: Arial, sans-serif;
-    color: #333;
-    margin: 0;
-    padding: 20px;
+@font-face {
+    font-family: 'basicFont'; /* 원하는 폰트 이름 */
+    src: url('assets/fonts/Prata-Regular.ttf') format('truetype'); /* 폰트 파일 경로 */
 }
 
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'basicFont', Arial, sans-serif; /* 기본 폰트로 설정 */
+}
+#drag-bar {
+    -webkit-app-region: drag; /* ✅ 이 영역에서 마우스로 창을 이동 가능 */
+    height: 10px;
+}
 #widget {
     max-width: 400px;
     margin: auto;
@@ -17,8 +23,8 @@ body {
 }
 
 h2 {
-    text-align: center;
-    color: #003366;
+    font-weight: bold;
+    user-select: none;
 }
 
 .card {
@@ -66,12 +72,14 @@ h2 {
 
 /* 전체 스크롤바 스타일 */
 ::-webkit-scrollbar {
-    width: 12px; /* 스크롤바의 너비 */
+    width: 8px; /* 스크롤바의 너비 */
+    background: rgba(255, 255, 255, 0.5); /* 스크롤바 배경색 */
+    border-radius: 10px; /* 모서리 둥글게 */
 }
 
 /* 스크롤바의 트랙(배경) 스타일 */
 ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.5); /* 트랙의 배경색 */
+    background: rgba(255, 255, 255, 0.3); /* 트랙의 배경색 */
     border-radius: 10px; /* 모서리 둥글게 */
 }
 
@@ -90,4 +98,17 @@ h2 {
 /* 스크롤바의 핸들이 이동할 때 물방울 효과 */
 ::-webkit-scrollbar-thumb:active {
     background: #001122; /* 핸들이 눌렸을 때 색상 */
+}
+
+.icon {
+    width: 25px; /* ✅ 원하는 크기로 조정 */
+    height: auto;
+    user-select: none;
+}
+
+.widget-header {
+    display: flex; /* ✅ 가로 정렬 */
+    align-items: center; /* ✅ 수직 중앙 정렬 */
+    justify-content: center; /* ✅ 가로 중앙 정렬 */
+    gap: 10px; /* ✅ 아이콘과 제목 사이 간격 */
 }

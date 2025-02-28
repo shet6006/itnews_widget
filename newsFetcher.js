@@ -58,7 +58,7 @@ async function fetchDevTo() {
     }
 }
 
-// ✅ Velog는 원래 코드로 되돌리기
+// ✅ Velog
 async function fetchVelog() {
     try {
         console.log("🔍 Velog 크롤링 시작...");
@@ -69,16 +69,20 @@ async function fetchVelog() {
         await page.goto("https://velog.io/", { waitUntil: "networkidle2" });
 
         let articles = await page.evaluate(() => {
-            let postElements = document.querySelectorAll(".PostCard_block__FTMsy a");
+            let postElements = document.querySelectorAll(".PostCard_block__FTMsy"); // ✅ 게시글 카드 하나씩 선택
             let results = [];
-            postElements.forEach((element, index) => {
-                if (index < 3) {
-                    let titleElement = element.querySelector("h2");
-                    let title = titleElement ? titleElement.innerText.trim() : "제목 없음";
-                    let url = element.getAttribute("href");
 
-                    if (!url.startsWith("https")) {  // ✅ URL이 상대경로인지 확인
-                        url = "https://velog.io" + url; // ✅ 상대경로일 경우 도메인 추가
+            postElements.forEach((postElement, index) => {
+                if (index < 3) {  // ✅ 최신 3개 게시글만 가져오기
+
+                    let linkElement = postElement.querySelectorAll("a")[1]; // ✅ 두 번째 <a> 태그 선택
+                    let url = linkElement ? linkElement.getAttribute("href") : "#";
+
+                    let titleElement = linkElement.querySelector("h4"); // ✅ 두 번째 <a> 태그 내부의 <h4> 가져오기
+                    let title = titleElement ? titleElement.innerText.trim() : "제목 없음";
+
+                    if (!url.startsWith("https")) {  
+                        url = "https://velog.io" + url; // ✅ 상대경로를 절대경로로 변환
                     }
 
                     results.push({ title, url, source: "Velog" });
@@ -95,6 +99,7 @@ async function fetchVelog() {
         return [];
     }
 }
+
 
 // 3개 사이트 뉴스 통합 크롤링
 async function fetchNews() {

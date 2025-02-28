@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,18 @@
     <link rel="stylesheet" href="style.css">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline';">
 </head>
+
 <body>
+    <div id="drag-bar"></div>
     <div id="widget">
-        <h2>📡 개발자 IT 뉴스</h2>
+        <div class="widget-header">
+            <img src="icon.png" alt="Icon" class="icon">
+            <h2>NEWS</h2>
+        </div>
         <div id="news-list"></div>
         <button id="translate-btn">🔄 번역</button>
     </div>
     <script src="renderer.js"></script>
 </body>
+
 </html>

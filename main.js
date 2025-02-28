@@ -6,14 +6,20 @@ const { translateText } = require("./translator");
 let mainWindow;
 let tray;
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    const Store = (await import("electron-store")).default; // ✅ 동적 import() 사용
+    const store = new Store(); // ✅ electron-store 인스턴스 생성
+
+    let windowBounds = store.get("windowBounds", { width: 450, height: 650 });
+
     mainWindow = new BrowserWindow({
-        width: 450,
-        height: 650,
+        width: windowBounds.width,
+        height: windowBounds.height,
+        x: windowBounds.x || 200,  // 저장된 X 좌표 (없으면 자동 중앙 정렬)
+        y: windowBounds.y || 10,  // 저장된 Y 좌표 (없으면 자동 중앙 정렬)
         transparent: true,  // ✅ 투명 배경
-        frame: false,       // ✅ 창 테두리 제거
+        frame: false, // 창 테두리 제거
         resizable: false,   // ✅ 크기 조절 불가능
-        alwaysOnTop: false, // ❌ 항상 최상위 X (다른 창보다 아래 유지)
         skipTaskbar: true,  // ✅ 작업 표시줄에서 숨기기
         fullscreenable: false,
         webPreferences: {
@@ -25,10 +31,8 @@ app.whenReady().then(() => {
     });
 
     mainWindow.loadFile("index.html");
-    mainWindow.setPosition(200, 50);
 
     // ✅ 바탕화면 위젯처럼 고정
-    mainWindow.setAlwaysOnTop(false, "screen-saver"); // 바탕화면보다 위, 다른 창보다 아래
     mainWindow.setVisibleOnAllWorkspaces(true);  // 모든 데스크톱에서 표시
     // ✅ 트레이 아이콘 추가
     tray = new Tray(path.join(__dirname, "icon.png")); // 아이콘 이미지 설정
@@ -65,8 +69,15 @@ app.whenReady().then(() => {
         }
     });
 
+    mainWindow.on("move", () => {
+        let bounds = mainWindow.getBounds();
+        store.set("windowBounds", bounds); // ✅ 창 위치 & 크기 저장
+    });
+
     // 앱이 닫혀도 트레이에서 실행되도록 설정
     mainWindow.on("close", (event) => {
+        let bounds = mainWindow.getBounds();
+        store.set("windowBounds", bounds); // ✅ 창 위치 & 크기 저장
         if (!app.isQuiting) {
             event.preventDefault();
             mainWindow.hide();
