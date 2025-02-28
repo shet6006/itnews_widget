@@ -100,19 +100,37 @@ app.whenReady().then(async () => {
 
     async function getStoredNews() {
         const lastFetchDate = store.get("lastFetchDate", null);
-        const today = new Date().toISOString().split("T")[0];
+        const today = new Date().toISOString().split("T")[0]; // 현재 날짜 (YYYY-MM-DD)
 
+        // 오늘의 뉴스가 이미 크롤링되었는지 확인
         if (lastFetchDate === today) {
             console.log("✅ 오늘의 뉴스는 이미 크롤링됨.");
-            return store.get("newsData", []);
+            return store.get("newsData", []); // 오늘의 뉴스가 이미 크롤링되었으면 저장된 뉴스 데이터 반환
         } else {
             console.log("🔄 새로운 뉴스 크롤링 실행...");
-            const news = await fetchNews();
-            store.set("newsData", news);
-            store.set("lastFetchDate", today);
-            return news;
+            try {
+                const news = await fetchNews(); // 새로운 뉴스 크롤링
+                store.set("newsData", news); // 크롤링한 뉴스 저장
+                store.set("lastFetchDate", today); // 오늘 날짜를 마지막 크롤링 날짜로 저장
+                return news; // 새로운 뉴스 반환
+            } catch (error) {
+                console.error("뉴스 크롤링 중 오류 발생:", error);
+                return []; // 오류 발생 시 빈 배열 반환
+            }
         }
     }
+    
+    // ✅ 앱 실행 시 9시 갱신 예약
+    const now = new Date();
+    const hours = now.getHours();
+
+    // 9시가 지나면 크롤링 수행
+    if (hours >= 9) {
+        console.log("🔄 9시가 지났으므로 새로운 뉴스 크롤링 실행...");
+        await getStoredNews(); // 9시가 지나면 크롤링 수행
+    }
+
+    scheduleDailyUpdate(); // 크롤링 스케줄 시작
 
     ipcMain.handle("get-news", async () => {
         return await getStoredNews();
@@ -150,3 +168,21 @@ app.whenReady().then(async () => {
         if (process.platform !== "darwin") app.quit();
     });
 });
+
+// ✅ 9시가 지나면 자동으로 뉴스 크롤링
+function scheduleDailyUpdate() {
+    const now = new Date();
+    const targetTime = new Date();
+    targetTime.setHours(9, 0, 0, 0); // 아침 9시 설정
+
+    let delay = targetTime - now; // 현재 시간과 9시 차이 계산
+    if (delay < 0) {
+        delay += 24 * 60 * 60 * 1000; // 이미 9시가 지났다면, 내일 9시로 설정
+    }
+
+    setTimeout(async () => {
+        console.log("뉴스 자동 갱신 시작...");
+        await getStoredNews(); // 9시에 뉴스 갱신
+        scheduleDailyUpdate(); // 다음 9시 예약
+    }, delay);
+}
