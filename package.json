@@ -24,20 +24,19 @@
     "win": {
       "target": "nsis",
       "icon": "icon.ico",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "runAfterFinish": true
+      "runAfterFinish": false
     }
   },
   "dependencies": {
     "axios": "^1.8.1",
     "cheerio": "^1.0.0",
-    "electron-auto-launch": "^5.0.7",
     "electron-store": "^10.0.1",
     "puppeteer": "^24.3.0"
   },

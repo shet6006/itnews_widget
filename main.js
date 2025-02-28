@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, shell } = require("electron");
 const path = require("path");
 const { fetchNews } = require("./newsFetcher");
 const { translateText } = require("./translator");
 
 let mainWindow;
 let tray;
+let store;
 
 // 📌 electron-store & auto-launch 동적 import
 async function initializeStore() {
@@ -12,14 +13,17 @@ async function initializeStore() {
     return new Store();
 }
 
-async function initializeAutoLaunch() {
-    const { default: AutoLaunch } = await import("electron-auto-launch");
-    return new AutoLaunch({ name: "ITNewsWidget", path: process.execPath });
+async function setAutoLaunch(enable) {
+    app.setLoginItemSettings({
+        openAtLogin: enable,
+        path: app.getPath('exe'),
+    });
+    store.set("autoLaunch", enable);
 }
 
 app.whenReady().then(async () => {
-    const store = await initializeStore();
-    const autoLauncher = await initializeAutoLaunch();
+    store = await initializeStore();
+    let autoLaunchEnabled = store.get("autoLaunch", false); // 기본값 false
 
     let windowBounds = store.get("windowBounds", { width: 450, height: 650 });
 
@@ -29,7 +33,7 @@ app.whenReady().then(async () => {
         x: windowBounds.x || 200,
         y: windowBounds.y || 10,
         transparent: true,
-        skipTaskbar: true,  // ✅ 작업 표시줄에서 숨기기
+        skipTaskbar: true, // ✅ 작업 표시줄에서 숨기기
         frame: false,
         resizable: false,
         fullscreenable: false,
@@ -44,30 +48,46 @@ app.whenReady().then(async () => {
     mainWindow.loadFile("index.html");
 
     // ✅ 트레이 아이콘 추가
-    tray = new Tray(path.join(__dirname, "icon.png")); // 아이콘 이미지 설정
-    const contextMenu = Menu.buildFromTemplate([
-        {
-            label: "위젯 열기/숨기기",
-            click: () => {
-                if (mainWindow.isVisible()) {
-                    mainWindow.hide();
-                } else {
-                    mainWindow.show();
+    tray = new Tray(path.join(__dirname, "icon.png"));
+
+    function updateTrayMenu() {
+        autoLaunchEnabled = store.get("autoLaunch", false);
+        const contextMenu = Menu.buildFromTemplate([
+            {
+                label: "위젯 열기/숨기기",
+                click: () => {
+                    if (mainWindow.isVisible()) {
+                        mainWindow.hide();
+                    } else {
+                        mainWindow.show();
+                    }
+                }
+            },
+            { type: "separator" },
+            {
+                label: `Windows 시작 시 실행 ${autoLaunchEnabled ? "✔" : ""}`, // 체크 표시
+                click: async () => {
+                    autoLaunchEnabled = !autoLaunchEnabled;
+                    await setAutoLaunch(autoLaunchEnabled);
+                    updateTrayMenu(); // 메뉴 업데이트
+                }
+            },
+            { type: "separator" },
+            {
+                label: "종료",
+                click: () => {
+                    app.isQuiting = true;
+                    app.quit();
                 }
             }
-        },
-        { type: "separator" },
-        {
-            label: "종료",
-            click: () => {
-                app.isQuiting = true; // 종료 플래그 설정
-                app.quit(); // 애플리케이션 종료
-            }
-        }
-    ]);
+        ]);
+
+        tray.setContextMenu(contextMenu);
+    }
+
+    updateTrayMenu(); // 최초 실행 시 트레이 메뉴 설정
 
     tray.setToolTip("개발자 IT 뉴스 위젯");
-    tray.setContextMenu(contextMenu);
 
     // ✅ 트레이 아이콘 클릭하면 위젯 보이기/숨기기
     tray.on("click", () => {
@@ -77,34 +97,6 @@ app.whenReady().then(async () => {
             mainWindow.show();
         }
     });
-
-    // ✅ 첫 실행 시 사용자에게 시작 프로그램 등록 여부 확인
-    const autoLaunchStatus = store.get("autoLaunch", null);
-
-    if (autoLaunchStatus === null) {
-        // ✅ 사용자에게 시작 프로그램 등록 여부 묻기
-        const choice = dialog.showMessageBoxSync({
-            type: "question",
-            buttons: ["예", "아니요"],
-            title: "시작 프로그램 등록",
-            message: "이 앱을 Windows 시작 시 자동 실행하도록 설정할까요?"
-        });
-
-        if (choice === 0) { // "예" 선택 시
-            await autoLauncher.enable();
-            store.set("autoLaunch", true);
-            console.log("🚀 자동 실행 활성화됨.");
-        } else {
-            store.set("autoLaunch", false);
-            console.log("⛔ 자동 실행 거부됨.");
-        }
-    } else if (autoLaunchStatus) {
-        // ✅ 사용자가 이전에 "예"를 선택했다면 자동 실행 유지
-        autoLauncher.enable();
-    } else {
-        // ✅ 사용자가 이전에 "아니요"를 선택했다면 자동 실행 설정하지 않음
-        autoLauncher.disable();
-    }
 
     async function getStoredNews() {
         const lastFetchDate = store.get("lastFetchDate", null);
