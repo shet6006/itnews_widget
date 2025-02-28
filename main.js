@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const path = require("path");
 const { fetchNews } = require("./newsFetcher");
 const { translateText } = require("./translator");
@@ -6,21 +6,32 @@ const { translateText } = require("./translator");
 let mainWindow;
 let tray;
 
+// 📌 electron-store & auto-launch 동적 import
+async function initializeStore() {
+    const { default: Store } = await import("electron-store");
+    return new Store();
+}
+
+async function initializeAutoLaunch() {
+    const { default: AutoLaunch } = await import("electron-auto-launch");
+    return new AutoLaunch({ name: "ITNewsWidget", path: process.execPath });
+}
+
 app.whenReady().then(async () => {
-    const Store = (await import("electron-store")).default; // ✅ 동적 import() 사용
-    const store = new Store(); // ✅ electron-store 인스턴스 생성
+    const store = await initializeStore();
+    const autoLauncher = await initializeAutoLaunch();
 
     let windowBounds = store.get("windowBounds", { width: 450, height: 650 });
 
     mainWindow = new BrowserWindow({
         width: windowBounds.width,
         height: windowBounds.height,
-        x: windowBounds.x || 200,  // 저장된 X 좌표 (없으면 자동 중앙 정렬)
-        y: windowBounds.y || 10,  // 저장된 Y 좌표 (없으면 자동 중앙 정렬)
-        transparent: true,  // ✅ 투명 배경
-        frame: false, // 창 테두리 제거
-        resizable: false,   // ✅ 크기 조절 불가능
+        x: windowBounds.x || 200,
+        y: windowBounds.y || 10,
+        transparent: true,
         skipTaskbar: true,  // ✅ 작업 표시줄에서 숨기기
+        frame: false,
+        resizable: false,
         fullscreenable: false,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
@@ -32,8 +43,6 @@ app.whenReady().then(async () => {
 
     mainWindow.loadFile("index.html");
 
-    // ✅ 바탕화면 위젯처럼 고정
-    mainWindow.setVisibleOnAllWorkspaces(true);  // 모든 데스크톱에서 표시
     // ✅ 트레이 아이콘 추가
     tray = new Tray(path.join(__dirname, "icon.png")); // 아이콘 이미지 설정
     const contextMenu = Menu.buildFromTemplate([
@@ -60,7 +69,7 @@ app.whenReady().then(async () => {
     tray.setToolTip("개발자 IT 뉴스 위젯");
     tray.setContextMenu(contextMenu);
 
-    // 트레이 아이콘 클릭하면 위젯 토글
+    // ✅ 트레이 아이콘 클릭하면 위젯 보이기/숨기기
     tray.on("click", () => {
         if (mainWindow.isVisible()) {
             mainWindow.hide();
@@ -69,15 +78,76 @@ app.whenReady().then(async () => {
         }
     });
 
-    mainWindow.on("move", () => {
-        let bounds = mainWindow.getBounds();
-        store.set("windowBounds", bounds); // ✅ 창 위치 & 크기 저장
+    // ✅ 첫 실행 시 사용자에게 시작 프로그램 등록 여부 확인
+    const autoLaunchStatus = store.get("autoLaunch", null);
+
+    if (autoLaunchStatus === null) {
+        // ✅ 사용자에게 시작 프로그램 등록 여부 묻기
+        const choice = dialog.showMessageBoxSync({
+            type: "question",
+            buttons: ["예", "아니요"],
+            title: "시작 프로그램 등록",
+            message: "이 앱을 Windows 시작 시 자동 실행하도록 설정할까요?"
+        });
+
+        if (choice === 0) { // "예" 선택 시
+            await autoLauncher.enable();
+            store.set("autoLaunch", true);
+            console.log("🚀 자동 실행 활성화됨.");
+        } else {
+            store.set("autoLaunch", false);
+            console.log("⛔ 자동 실행 거부됨.");
+        }
+    } else if (autoLaunchStatus) {
+        // ✅ 사용자가 이전에 "예"를 선택했다면 자동 실행 유지
+        autoLauncher.enable();
+    } else {
+        // ✅ 사용자가 이전에 "아니요"를 선택했다면 자동 실행 설정하지 않음
+        autoLauncher.disable();
+    }
+
+    async function getStoredNews() {
+        const lastFetchDate = store.get("lastFetchDate", null);
+        const today = new Date().toISOString().split("T")[0];
+
+        if (lastFetchDate === today) {
+            console.log("✅ 오늘의 뉴스는 이미 크롤링됨.");
+            return store.get("newsData", []);
+        } else {
+            console.log("🔄 새로운 뉴스 크롤링 실행...");
+            const news = await fetchNews();
+            store.set("newsData", news);
+            store.set("lastFetchDate", today);
+            return news;
+        }
+    }
+
+    ipcMain.handle("get-news", async () => {
+        return await getStoredNews();
     });
 
-    // 앱이 닫혀도 트레이에서 실행되도록 설정
+    ipcMain.handle("translate-news", async () => {
+        let articles = await getStoredNews();
+        for (let article of articles) {
+            article.title = await translateText(article.title, "ko");
+        }
+        return articles;
+    });
+
+    ipcMain.handle("open-link", (event, url) => {
+        if (url) {
+            shell.openExternal(url);
+        }
+    });
+
+    mainWindow.on("move", () => {
+        let bounds = mainWindow.getBounds();
+        store.set("windowBounds", bounds);
+    });
+
     mainWindow.on("close", (event) => {
         let bounds = mainWindow.getBounds();
-        store.set("windowBounds", bounds); // ✅ 창 위치 & 크기 저장
+        store.set("windowBounds", bounds);
         if (!app.isQuiting) {
             event.preventDefault();
             mainWindow.hide();
@@ -87,27 +157,4 @@ app.whenReady().then(async () => {
     app.on("window-all-closed", () => {
         if (process.platform !== "darwin") app.quit();
     });
-
-    console.log("isQuiting 상태:", app.isQuiting);
-});
-
-ipcMain.handle("get-news", async () => {
-    return await fetchNews();
-});
-
-ipcMain.handle("translate-news", async () => {
-    let articles = await fetchNews();
-    for (let article of articles) {
-        article.title = await translateText(article.title, "ko"); // 영어 → 한국어 번역
-    }
-    return articles;
-});
-
-ipcMain.handle('open-link', (event, url) => {
-    console.log(`🔗 open-link 호출: ${url}`); // URL 확인
-    if (url) {
-        shell.openExternal(url);
-    } else {
-        console.error("❌ URL이 정의되지 않음!");
-    }
 });
