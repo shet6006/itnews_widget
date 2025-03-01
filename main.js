@@ -21,8 +21,34 @@ async function setAutoLaunch(enable) {
     store.set("autoLaunch", enable);
 }
 
+// // lastFetchDate 초기화
+// function resetLastFetchDate() {
+//     store.set("lastFetchDate", null); // 또는 store.set("lastFetchDate", "");로 설정 가능
+//     console.log("lastFetchDate가 초기화되었습니다.");
+// }
+
 app.whenReady().then(async () => {
+    
+    ipcMain.handle("get-news", async () => {
+        return await getStoredNews();
+    });
+
+    ipcMain.handle("translate-news", async () => {
+        let articles = await getStoredNews();
+        for (let article of articles) {
+            article.title = await translateText(article.title, "ko");
+        }
+        return articles;
+    });
+
+    ipcMain.handle("open-link", (event, url) => {
+        if (url) {
+            shell.openExternal(url);
+        }
+    });
     store = await initializeStore();
+    // resetLastFetchDate(); // 앱 시작 시 lastFetchDate 초기화
+
     let autoLaunchEnabled = store.get("autoLaunch", false); // 기본값 false
 
     let windowBounds = store.get("windowBounds", { width: 450, height: 650 });
@@ -132,23 +158,7 @@ app.whenReady().then(async () => {
 
     scheduleDailyUpdate(); // 크롤링 스케줄 시작
 
-    ipcMain.handle("get-news", async () => {
-        return await getStoredNews();
-    });
 
-    ipcMain.handle("translate-news", async () => {
-        let articles = await getStoredNews();
-        for (let article of articles) {
-            article.title = await translateText(article.title, "ko");
-        }
-        return articles;
-    });
-
-    ipcMain.handle("open-link", (event, url) => {
-        if (url) {
-            shell.openExternal(url);
-        }
-    });
 
     mainWindow.on("move", () => {
         let bounds = mainWindow.getBounds();

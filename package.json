@@ -19,7 +19,8 @@
       "translator.js",
       "icon.png",
       "style.css",
-      "renderer.js"
+      "renderer.js",
+      "assets/fonts/Prata-Regular.ttf"
     ],
     "win": {
       "target": "nsis",

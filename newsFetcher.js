@@ -81,7 +81,7 @@ async function fetchVelog() {
                     let titleElement = linkElement.querySelector("h4"); // ✅ 두 번째 <a> 태그 내부의 <h4> 가져오기
                     let title = titleElement ? titleElement.innerText.trim() : "제목 없음";
 
-                    if (!url.startsWith("https")) {  
+                    if (!url.startsWith("https")) {
                         url = "https://velog.io" + url; // ✅ 상대경로를 절대경로로 변환
                     }
 
@@ -100,14 +100,49 @@ async function fetchVelog() {
     }
 }
 
+async function fetchAWS() {
+    try {
+        console.log("🔍 AWS 크롤링 시작...");
+
+        const browser = await puppeteer.launch({ headless: "new" });
+        const page = await browser.newPage();
+
+        await page.goto("https://aws.amazon.com/ko/blogs/aws/page/2/", { waitUntil: "networkidle2" });
+
+        // ✅ Puppeteer에서 `document.querySelectorAll`을 실행할 때는 `page.evaluate()`를 사용해야 함
+        const articles = await page.evaluate(() => {
+            return [...document.querySelectorAll(".blog-post")]
+                .slice(0, 3)  // ✅ 앞에서 3개만 선택
+                .map(post => {
+                    const titleElement = post.querySelector("h2"); // h2 태그 가져오기
+                    const urlElement = post.querySelector("a");   // 첫 번째 a 태그 가져오기
+
+                    return {
+                        title: titleElement ? titleElement.textContent.trim() : "No Title",
+                        url: urlElement ? urlElement.href : "No Link",
+                        source: "AWS"
+                    };
+                });
+        });
+
+        console.log(articles);
+
+        await browser.close(); // ✅ 브라우저 닫기
+        return articles; // ✅ 크롤링된 데이터 반환
+    } catch (error) {
+        console.error("❌ AWS 크롤링 실패:", error);
+        return [];
+    }
+}
 
 // 3개 사이트 뉴스 통합 크롤링
 async function fetchNews() {
     const hackerNews = await fetchHackerNews();
     const devTo = await fetchDevTo();
-    const velog = await fetchVelog(); // ✅ Velog는 원래 코드 유지
+    const velog = await fetchVelog();
+    const AWS = await fetchAWS();
 
-    const allNews = [...hackerNews, ...devTo, ...velog];
+    const allNews = [...hackerNews, ...devTo, ...velog, ...AWS];
     console.log("📰 최종 크롤링된 뉴스:", allNews);
     return allNews;
 }
