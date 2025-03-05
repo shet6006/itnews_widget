@@ -14,7 +14,7 @@ async function translateText(text, targetLang = "ko") {
 
         return response.data[0][0][0];
     } catch (error) {
-        console.error("번역 실패:", error);
+        console.error("Translation failed:", error);
         return text;
     }
 }

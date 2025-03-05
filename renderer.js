@@ -1,27 +1,27 @@
 async function loadNews() {
-    console.log("🔍 뉴스 로딩 시작...");
+    console.log("🔍 Loading news...");
     const newsList = document.getElementById("news-list");
 
     if (!newsList) {
-        console.error("❌ `news-list` 요소를 찾을 수 없음!");
+        console.error("❌ Unable to find `news-list` element!");
         return;
     }
 
-    newsList.innerHTML = "<li>불러오는 중...</li>";
+    newsList.innerHTML = "<li>Loading...</li>";
 
     try {
         const articles = await window.electron.getNews();
-        console.log("✅ 가져온 뉴스 데이터:", articles);
+        console.log("✅ Fetched news data:", articles);
 
         if (!articles || articles.length === 0) {
-            newsList.innerHTML = "<li>뉴스를 불러올 수 없습니다.</li>";
+            newsList.innerHTML = "<li>Unable to load news.</li>";
             return;
         }
 
         displayNews(articles);
     } catch (error) {
-        console.error("❌ 뉴스 로딩 실패:", error);
-        newsList.innerHTML = "<li>뉴스를 불러올 수 없습니다.</li>";
+        console.error("❌ Failed to load news:", error);
+        newsList.innerHTML = "<li>Unable to load news.</li>";
     }
 }
 

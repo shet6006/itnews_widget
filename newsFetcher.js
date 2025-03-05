@@ -1,121 +1,159 @@
 const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 
+// ✅ Windows에서 Chrome 실행 파일 찾기
+function findChromeWin() {
+    const chromePaths = [
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        path.join(process.env.LOCALAPPDATA, "Google\\Chrome\\Application\\chrome.exe"),
+        "C:\\Program Files\\Chromium\\Application\\chrome.exe"
+    ];
+
+    for (const chromePath of chromePaths) {
+        if (fs.existsSync(chromePath)) {
+            console.log(`✅ Found Chrome at: ${chromePath}`);
+            return chromePath;
+        }
+    }
+
+    console.warn("❌ Chrome not found in default paths.");
+    return null;
+}
+
+// ✅ Puppeteer 실행 시 Chrome 경로 적용
+async function launchBrowser() {
+    let executablePath = findChromeWin();
+
+    // Chrome이 없으면 Puppeteer 기본 브라우저 사용
+    if (!executablePath) {
+        try {
+            executablePath = puppeteer.executablePath();
+        } catch (error) {
+            console.error("❌ Puppeteer Chrome not found.");
+            return null;
+        }
+    }
+
+    const browser = await puppeteer.launch({
+        headless: "new",
+        executablePath,
+    });
+
+    return browser;
+}
+
+// ✅ Hacker News 크롤링
 async function fetchHackerNews() {
     try {
-        console.log("🔍 Hacker News 크롤링 시작...");
+        console.log("🔍 Starting Hacker News crawling...");
+        const browser = await launchBrowser();
+        if (!browser) return [];
 
-        const browser = await puppeteer.launch({ headless: "new" });
         const page = await browser.newPage();
         await page.goto("https://news.ycombinator.com/", { waitUntil: "networkidle2" });
 
         let articles = await page.evaluate(() => {
-            let results = [];
-            document.querySelectorAll(".title a").forEach((element, index) => {
-                if (index < 3) {
-                    let title = element.innerText.trim();
-                    let url = element.href;
-                    results.push({ title, url, source: "Hacker News" });
-                }
-            });
-            return results;
+            return [...document.querySelectorAll(".title a")]
+                .slice(0, 3)
+                .map(element => ({
+                    title: element.innerText.trim(),
+                    url: element.href,
+                    source: "Hacker News"
+                }));
         });
 
         await browser.close();
-        console.log("✅ Hacker News 크롤링 완료:", articles);
+        console.log("✅ Hacker News crawling completed:", articles);
         return articles;
     } catch (error) {
-        console.error("❌ Hacker News 크롤링 실패:", error);
+        console.error("❌ Failed to crawl Hacker News:", error);
         return [];
     }
 }
 
+// ✅ Dev.to 크롤링
 async function fetchDevTo() {
     try {
-        console.log("🔍 Dev.to 크롤링 시작...");
+        console.log("🔍 Starting Dev.to crawling...");
+        const browser = await launchBrowser();
+        if (!browser) return [];
 
-        const browser = await puppeteer.launch({ headless: "new" });
         const page = await browser.newPage();
         await page.goto("https://dev.to/", { waitUntil: "networkidle2" });
 
         let articles = await page.evaluate(() => {
-            let results = [];
-            document.querySelectorAll(".crayons-story__title a").forEach((element, index) => {
-                if (index < 3) {
-                    let title = element.innerText.trim();
-                    let url = element.href;
-                    results.push({ title, url, source: "Dev.to" });
-                }
-            });
-            return results;
+            return [...document.querySelectorAll(".crayons-story__title a")]
+                .slice(0, 3)
+                .map(element => ({
+                    title: element.innerText.trim(),
+                    url: element.href,
+                    source: "Dev.to"
+                }));
         });
 
         await browser.close();
-        console.log("✅ Dev.to 크롤링 완료:", articles);
+        console.log("✅ Dev.to crawling completed:", articles);
         return articles;
     } catch (error) {
-        console.error("❌ Dev.to 크롤링 실패:", error);
+        console.error("❌ Failed to crawl Dev.to:", error);
         return [];
     }
 }
 
-// ✅ Velog
+// ✅ Velog 크롤링
 async function fetchVelog() {
     try {
-        console.log("🔍 Velog 크롤링 시작...");
+        console.log("🔍 Starting Velog crawling...");
+        const browser = await launchBrowser();
+        if (!browser) return [];
 
-        const browser = await puppeteer.launch({ headless: "new" });
         const page = await browser.newPage();
-
         await page.goto("https://velog.io/", { waitUntil: "networkidle2" });
 
         let articles = await page.evaluate(() => {
-            let postElements = document.querySelectorAll(".PostCard_block__FTMsy"); // ✅ 게시글 카드 하나씩 선택
-            let results = [];
-
-            postElements.forEach((postElement, index) => {
-                if (index < 3) {  // ✅ 최신 3개 게시글만 가져오기
-
-                    let linkElement = postElement.querySelectorAll("a")[1]; // ✅ 두 번째 <a> 태그 선택
+            return [...document.querySelectorAll(".PostCard_block__FTMsy")]
+                .slice(0, 3)
+                .map(postElement => {
+                    let linkElement = postElement.querySelectorAll("a")[1];
                     let url = linkElement ? linkElement.getAttribute("href") : "#";
-
-                    let titleElement = linkElement.querySelector("h4"); // ✅ 두 번째 <a> 태그 내부의 <h4> 가져오기
-                    let title = titleElement ? titleElement.innerText.trim() : "제목 없음";
+                    let titleElement = linkElement?.querySelector("h4");
+                    let title = titleElement ? titleElement.innerText.trim() : "No Title";
 
                     if (!url.startsWith("https")) {
-                        url = "https://velog.io" + url; // ✅ 상대경로를 절대경로로 변환
+                        url = "https://velog.io" + url;
                     }
 
-                    results.push({ title, url, source: "Velog" });
-                }
-            });
-            return results;
+                    return { title, url, source: "Velog" };
+                });
         });
 
         await browser.close();
-        console.log("✅ Velog 크롤링 완료:", articles);
+        console.log("✅ Velog crawling completed:", articles);
         return articles;
     } catch (error) {
-        console.error("❌ Velog 크롤링 실패:", error);
+        console.error("❌ Failed to crawl Velog:", error);
         return [];
     }
 }
 
+// ✅ AWS 블로그 크롤링
 async function fetchAWS() {
     try {
-        console.log("🔍 AWS 크롤링 시작...");
+        console.log("🔍 Starting AWS crawling...");
+        const browser = await launchBrowser();
+        if (!browser) return [];
 
-        const browser = await puppeteer.launch({ headless: "new" });
         const page = await browser.newPage();
-
         await page.goto("https://aws.amazon.com/ko/blogs/aws/page/2/", { waitUntil: "networkidle2" });
 
-        // ✅ Puppeteer에서 `document.querySelectorAll`을 실행할 때는 `page.evaluate()`를 사용해야 함
-        const articles = await page.evaluate(() => {
+        let articles = await page.evaluate(() => {
             return [...document.querySelectorAll(".blog-post")]
-                .slice(0, 3)  // ✅ 앞에서 3개만 선택
+                .slice(0, 3)
                 .map(post => {
-                    const titleElement = post.querySelector("h2"); // h2 태그 가져오기
-                    const urlElement = post.querySelector("a");   // 첫 번째 a 태그 가져오기
+                    const titleElement = post.querySelector("h2");
+                    const urlElement = post.querySelector("a");
 
                     return {
                         title: titleElement ? titleElement.textContent.trim() : "No Title",
@@ -125,25 +163,31 @@ async function fetchAWS() {
                 });
         });
 
-        console.log(articles);
-
-        await browser.close(); // ✅ 브라우저 닫기
-        return articles; // ✅ 크롤링된 데이터 반환
+        await browser.close();
+        console.log("✅ AWS crawling completed:", articles);
+        return articles;
     } catch (error) {
-        console.error("❌ AWS 크롤링 실패:", error);
+        console.error("❌ Failed to crawl AWS:", error);
         return [];
     }
 }
 
-// 3개 사이트 뉴스 통합 크롤링
+// ✅ 4개 사이트 뉴스 통합 크롤링
 async function fetchNews() {
-    const hackerNews = await fetchHackerNews();
-    const devTo = await fetchDevTo();
-    const velog = await fetchVelog();
-    const AWS = await fetchAWS();
+    console.log("🔍 Starting news crawling...");
 
-    const allNews = [...hackerNews, ...devTo, ...velog, ...AWS];
-    console.log("📰 최종 크롤링된 뉴스:", allNews);
+    const results = await Promise.allSettled([
+        fetchHackerNews(),
+        fetchDevTo(),
+        fetchVelog(),
+        fetchAWS()
+    ]);
+
+    const allNews = results
+        .filter(result => result.status === "fulfilled")
+        .flatMap(result => result.value);
+
+    console.log("📰 Final crawled news:", allNews);
     return allNews;
 }
 

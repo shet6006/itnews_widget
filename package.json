@@ -20,7 +20,8 @@
       "icon.png",
       "style.css",
       "renderer.js",
-      "assets/fonts/Prata-Regular.ttf"
+      "assets/fonts/Prata-Regular.ttf",
+      ".cache/puppeteer/**"
     ],
     "win": {
       "target": "nsis",
@@ -39,7 +40,7 @@
     "axios": "^1.8.1",
     "cheerio": "^1.0.0",
     "electron-store": "^10.0.1",
-    "puppeteer": "^24.3.0"
+    "puppeteer": "^24.3.1"
   },
   "devDependencies": {
     "electron": "^34.2.0",

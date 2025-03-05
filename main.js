@@ -24,7 +24,7 @@ async function setAutoLaunch(enable) {
 // // lastFetchDate 초기화
 // function resetLastFetchDate() {
 //     store.set("lastFetchDate", null); // 또는 store.set("lastFetchDate", "");로 설정 가능
-//     console.log("lastFetchDate가 초기화되었습니다.");
+//     console.log("lastFetchDate has been reset.");
 // }
 
 app.whenReady().then(async () => {
@@ -59,7 +59,7 @@ app.whenReady().then(async () => {
         x: windowBounds.x || 200,
         y: windowBounds.y || 10,
         transparent: true,
-        skipTaskbar: true, // ✅ 작업 표시줄에서 숨기기
+        skipTaskbar: true, // ✅ Hide from taskbar
         frame: false,
         resizable: false,
         fullscreenable: false,
@@ -73,14 +73,14 @@ app.whenReady().then(async () => {
 
     mainWindow.loadFile("index.html");
 
-    // ✅ 트레이 아이콘 추가
+    // ✅ Add tray icon
     tray = new Tray(path.join(__dirname, "icon.png"));
 
     function updateTrayMenu() {
         autoLaunchEnabled = store.get("autoLaunch", false);
         const contextMenu = Menu.buildFromTemplate([
             {
-                label: "위젯 열기/숨기기",
+                label: "Show/Hide Widget",
                 click: () => {
                     if (mainWindow.isVisible()) {
                         mainWindow.hide();
@@ -91,16 +91,16 @@ app.whenReady().then(async () => {
             },
             { type: "separator" },
             {
-                label: `Windows 시작 시 실행 ${autoLaunchEnabled ? "✔" : ""}`, // 체크 표시
+                label: `Run at Windows startup ${autoLaunchEnabled ? "✔" : ""}`, // Check mark
                 click: async () => {
                     autoLaunchEnabled = !autoLaunchEnabled;
                     await setAutoLaunch(autoLaunchEnabled);
-                    updateTrayMenu(); // 메뉴 업데이트
+                    updateTrayMenu(); // Update menu
                 }
             },
             { type: "separator" },
             {
-                label: "종료",
+                label: "Exit",
                 click: () => {
                     app.isQuiting = true;
                     app.quit();
@@ -111,11 +111,11 @@ app.whenReady().then(async () => {
         tray.setContextMenu(contextMenu);
     }
 
-    updateTrayMenu(); // 최초 실행 시 트레이 메뉴 설정
+    updateTrayMenu(); // Set tray menu on first run
 
-    tray.setToolTip("개발자 IT 뉴스 위젯");
+    tray.setToolTip("Developer IT News Widget");
 
-    // ✅ 트레이 아이콘 클릭하면 위젯 보이기/숨기기
+    // ✅ Click tray icon to show/hide widget
     tray.on("click", () => {
         if (mainWindow.isVisible()) {
             mainWindow.hide();
@@ -126,39 +126,44 @@ app.whenReady().then(async () => {
 
     async function getStoredNews() {
         const lastFetchDate = store.get("lastFetchDate", null);
-        const today = new Date().toISOString().split("T")[0]; // 현재 날짜 (YYYY-MM-DD)
-
-        // 오늘의 뉴스가 이미 크롤링되었는지 확인
-        if (lastFetchDate === today) {
-            console.log("✅ 오늘의 뉴스는 이미 크롤링됨.");
-            return store.get("newsData", []); // 오늘의 뉴스가 이미 크롤링되었으면 저장된 뉴스 데이터 반환
+        const newsData = store.get("newsData", []);
+    
+        const today = new Date().toISOString().split("T")[0];
+    
+        if (lastFetchDate === today && newsData.length > 0) {
+            console.log("✅ Today's news has already been crawled.");
+            return newsData; 
         } else {
-            console.log("🔄 새로운 뉴스 크롤링 실행...");
+            console.log("🔄 New news crawling in progress...");
             try {
                 const news = await fetchNews(); // 새로운 뉴스 크롤링
-                store.set("newsData", news); // 크롤링한 뉴스 저장
-                store.set("lastFetchDate", today); // 오늘 날짜를 마지막 크롤링 날짜로 저장
-                return news; // 새로운 뉴스 반환
+                if (news.length > 0) { // 뉴스가 정상적으로 크롤링된 경우만 저장
+                    store.set("newsData", news);
+                    store.set("lastFetchDate", today);
+                } else {
+                    console.warn("⚠️ Crawled news is empty. Keeping old data.");
+                }
+                return news.length > 0 ? news : newsData; // 새 뉴스가 없으면 기존 데이터 반환
             } catch (error) {
-                console.error("뉴스 크롤링 중 오류 발생:", error);
-                return []; // 오류 발생 시 빈 배열 반환
+                console.error("Error occurred during news crawling:", error);
+                return newsData; // 오류 발생 시 기존 데이터 반환
             }
         }
     }
     
-    // ✅ 앱 실행 시 9시 갱신 예약
+    
+    
+    // ✅ Schedule update at 9 AM
     const now = new Date();
     const hours = now.getHours();
 
-    // 9시가 지나면 크롤링 수행
+    // Perform crawling if it's past 9 AM
     if (hours >= 9) {
-        console.log("🔄 9시가 지났으므로 새로운 뉴스 크롤링 실행...");
-        await getStoredNews(); // 9시가 지나면 크롤링 수행
+        console.log("🔄 It's past 9 AM, starting new news crawling...");
+        await getStoredNews(); // Perform crawling if past 9 AM
     }
 
-    scheduleDailyUpdate(); // 크롤링 스케줄 시작
-
-
+    scheduleDailyUpdate(); // Start crawling schedule
 
     mainWindow.on("move", () => {
         let bounds = mainWindow.getBounds();
@@ -179,20 +184,20 @@ app.whenReady().then(async () => {
     });
 });
 
-// ✅ 9시가 지나면 자동으로 뉴스 크롤링
+// ✅ Automatically crawl news after 9 AM
 function scheduleDailyUpdate() {
     const now = new Date();
     const targetTime = new Date();
-    targetTime.setHours(9, 0, 0, 0); // 아침 9시 설정
+    targetTime.setHours(9, 0, 0, 0); // Set to 9 AM
 
-    let delay = targetTime - now; // 현재 시간과 9시 차이 계산
+    let delay = targetTime - now; // Calculate delay until 9 AM
     if (delay < 0) {
-        delay += 24 * 60 * 60 * 1000; // 이미 9시가 지났다면, 내일 9시로 설정
+        delay += 24 * 60 * 60 * 1000; // If past 9 AM, set for next day
     }
 
     setTimeout(async () => {
-        console.log("뉴스 자동 갱신 시작...");
-        await getStoredNews(); // 9시에 뉴스 갱신
-        scheduleDailyUpdate(); // 다음 9시 예약
+        console.log("Starting automatic news update...");
+        await getStoredNews(); // Update news at 9 AM
+        scheduleDailyUpdate(); // Schedule next 9 AM
     }, delay);
 }
