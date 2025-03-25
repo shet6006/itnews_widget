@@ -53,4 +53,9 @@ document.getElementById("translate-btn").addEventListener("click", async () => {
     displayNews(articles);
 });
 
+document.getElementById("refresh-btn").addEventListener("click", async () => {
+    const articles = await window.electron.fetchNews();
+    displayNews(articles);
+});
+
 window.onload = loadNews;

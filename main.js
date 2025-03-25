@@ -46,6 +46,12 @@ app.whenReady().then(async () => {
             shell.openExternal(url);
         }
     });
+
+    ipcMain.handle('fetch-news', async () => {
+        const news = await fetchNews(); // 뉴스 크롤링
+        return news; // 결과 반환
+    });
+
     store = await initializeStore();
     // resetLastFetchDate(); // 앱 시작 시 lastFetchDate 초기화
 

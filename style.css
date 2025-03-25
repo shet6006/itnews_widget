@@ -54,21 +54,28 @@ h2 {
     text-decoration: underline;
 }
 
-#translate-btn {
-    display: block;
-    width: 100%;
+.button-container {
+    display: flex;
+    gap: 10px; /* 버튼 사이 간격 */
+    margin-top: 20px;
+}
+
+#translate-btn,
+#refresh-btn {
+    flex: 1; /* 두 버튼 너비 동일하게 */
     padding: 10px;
     background: #003366;
     color: white;
     border: 1px solid #002244;
     border-radius: 5px;
     cursor: pointer;
-    margin-top: 20px;
 }
 
-#translate-btn:hover {
+#translate-btn:hover,
+#refresh-btn:hover {
     background: #002244;
 }
+
 
 /* 전체 스크롤바 스타일 */
 ::-webkit-scrollbar {
